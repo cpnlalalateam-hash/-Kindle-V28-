@@ -2,116 +2,150 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>阿寒湖編・完全統合エディター (救済パッチ適用済み)</title>
+    <title>阿寒湖編・完全統合エディター (最終修復版)</title>
     <script src="https://unpkg.com/docx@7.1.0/build/index.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     <style>
         :root { --accent: #27ae60; --bg: #0d0d0d; --pane-bg: #161616; --text: #e0e0e0; }
-        body { background: var(--bg); color: var(--text); font-family: "MS Mincho", serif; display: flex; height: 100vh; margin: 0; overflow: hidden; }
+        body { background: var(--bg); color: var(--text); font-family: "MS Mincho", "Hiragino Mincho ProN", serif; display: flex; height: 100vh; margin: 0; overflow: hidden; }
+        
+        /* 3画面レイアウト：35% / 35% / 30% */
         .pane { height: 100vh; display: flex; flex-direction: column; border-right: 1px solid #333; box-sizing: border-box; }
         #master-editor { width: 35%; background: var(--pane-bg); padding: 20px; overflow-y: auto; }
         #tate-preview { width: 35%; padding: 20px; align-items: center; overflow: hidden; }
         #yoko-preview { width: 30%; padding: 20px; align-items: center; overflow: hidden; border-right: none; }
+
         label { display: block; font-weight: bold; margin: 15px 0 5px; color: var(--accent); font-family: sans-serif; font-size: 0.85em; }
         input, textarea { width: 100%; background: #222; border: 1px solid #444; color: #fff; padding: 12px; border-radius: 8px; box-sizing: border-box; font-size: 1em; }
         #main-input { height: 45vh; line-height: 1.8; resize: none; }
+
+        /* スマホフレーム */
         .phone-frame { background: white; border: 12px solid #222; border-radius: 40px; color: #333; box-shadow: 0 30px 60px rgba(0,0,0,0.8); position: relative; display: flex; flex-direction: column; overflow: hidden; }
         #frame-tate { width: 450px; height: 80vh; }
         #frame-yoko { width: 300px; height: 80vh; }
         .content-area { padding: 30px; box-sizing: border-box; outline: none; min-height: 100%; }
         #view-tate { writing-mode: vertical-rl; height: 100%; width: 100%; overflow-x: auto; line-height: 2.2; font-size: 1.1em; }
         #view-yoko { writing-mode: horizontal-tb; width: 100%; overflow-y: auto; line-height: 1.9; font-size: 1em; }
-        .cover-img { width: 100%; height: auto; border-radius: 8px; margin-bottom: 20px; }
-        .toc-indicator { background: #222; padding: 10px; border-radius: 8px; font-size: 0.8em; margin-bottom: 10px; color: var(--accent); border-left: 4px solid var(--accent); }
-        .btn-shoot { background: var(--accent); color: white; padding: 24px; border: none; border-radius: 50px; font-weight: bold; cursor: pointer; width: 100%; font-size: 1.3em; margin-top: 20px; }
+
+        .cover-img { width: 100%; height: auto; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        .toc-indicator { background: #222; padding: 10px; border-radius: 8px; font-size: 0.8em; margin-bottom: 10px; color: var(--accent); border-left: 4px solid var(--accent); font-family: sans-serif; }
+        
+        .btn-shoot { background: var(--accent); color: white; padding: 24px; border: none; border-radius: 50px; font-weight: bold; cursor: pointer; width: 100%; font-size: 1.3em; margin-top: 20px; box-shadow: 0 10px 20px rgba(39, 174, 96, 0.4); }
     </style>
 </head>
 <body>
 
 <div id="master-editor" class="pane">
-    <h2 style="color:var(--accent); margin:0;">🏛️ 阿寒湖編・要塞エディター</h2>
-    <label>1. 表紙画像</label>
+    <h2 style="color:var(--accent); margin:0; font-family:sans-serif;">🏛️ 阿寒湖編・完全統合版</h2>
+    
+    <label>1. 表紙画像を読み込む</label>
     <input type="file" id="f-cover" accept="image/*" onchange="loadCover(event)">
     <img id="cover-preview-img" class="cover-img" style="display:none;">
+
     <label>2. タイトル</label>
-    <input type="text" id="f-title" value="逆転のラスト・ダイヤモンド" oninput="sync('master')">
+    <input type="text" id="f-title" value="始発列車を待つ君へ" oninput="sync('master')">
+    
     <label>3. あらすじ</label>
-    <textarea id="f-desc" oninput="sync('master')" style="height:80px;">阿寒湖の真実。LaLaLaが放つ衝撃作。</textarea>
-    <label>4. 本文（目次自動検出）</label>
-    <div id="toc-preview" class="toc-indicator">目次を検出中...</div>
-    <textarea id="main-input" oninput="sync('master')" placeholder="ここに全本文を..."></textarea>
-    <button class="btn-shoot" onclick="exportWord()">【バグなし・完成原稿を射出】</button>
+    <textarea id="f-desc" oninput="sync('master')" style="height:80px;">無理だと言える強さを、その手に。</textarea>
+    
+    <label>4. 本文入力（目次自動生成）</label>
+    <div id="toc-preview" class="toc-indicator">目次検出中...</div>
+    <textarea id="main-input" oninput="sync('master')" placeholder="ここに全本文を貼り付けてください..."></textarea>
+    
+    <button class="btn-shoot" onclick="exportWord()">【バグなしWord原稿を射出】</button>
 </div>
 
 <div id="tate-preview" class="pane">
-    <div class="phone-frame" id="frame-tate"><div id="view-tate" class="content-area" contenteditable="true" oninput="sync('tate')"></div></div>
+    <label style="text-align:center">縦書きスマホイメージ</label>
+    <div class="phone-frame" id="frame-tate">
+        <div id="view-tate" class="content-area" contenteditable="true" oninput="sync('tate')"></div>
+    </div>
 </div>
 
 <div id="yoko-preview" class="pane">
-    <div class="phone-frame" id="frame-yoko"><div id="view-yoko" class="content-area" contenteditable="true" oninput="sync('yoko')"></div></div>
+    <label style="text-align:center">横書き校正イメージ</label>
+    <div class="phone-frame" id="frame-yoko">
+        <div id="view-yoko" class="content-area" contenteditable="true" oninput="sync('yoko')"></div>
+    </div>
 </div>
 
 <script>
     const el = (id) => document.getElementById(id);
-    const chapterRegex = /^(第[0-9一二三四五六七八九十百]+[章話]|序章|終章|エピローグ|プロローグ)/;
+    // 第n話にも対応した検知
+    const chapterRegex = /^(第[0-9一二三四五六七八九十百]+[話章]|序章|終章|エピローグ|プロローグ)/;
     let coverBase64 = null;
 
     function loadCover(event) {
         const file = event.target.files[0];
         const reader = new FileReader();
-        reader.onload = (e) => { coverBase64 = e.target.result; el('cover-preview-img').src = coverBase64; el('cover-preview-img').style.display = 'block'; sync('master'); };
+        reader.onload = (e) => {
+            coverBase64 = e.target.result;
+            el('cover-preview-img').src = coverBase64;
+            el('cover-preview-img').style.display = 'block';
+            sync('master');
+        };
         reader.readAsDataURL(file);
     }
 
     function sync(source) {
         const title = el('f-title').value;
         const desc = el('f-desc').value;
-        let content = (source === 'master') ? el('main-input').value : (source === 'tate' ? el('view-tate').innerText : el('view-yoko').innerText);
+        let content = "";
+        if (source === 'master') content = el('main-input').value;
+        else if (source === 'tate') content = el('view-tate').innerText;
+        else if (source === 'yoko') content = el('view-yoko').innerText;
+
         if (source !== 'master') el('main-input').value = content;
+
         const lines = content.split('\n');
         let chapterList = [];
-        let htmlBody = lines.map(line => {
-            if (chapterRegex.test(line)) { chapterList.push(line); return `<b style="color:var(--accent); display:block; margin:20px 0;">${line}</b>`; }
+        let htmlBody = lines.map((line) => {
+            if (chapterRegex.test(line)) {
+                chapterList.push(line);
+                return `<b style="color:var(--accent); font-size:1.2em; display:block; margin:20px 0;">${line}</b>`;
+            }
             return line;
         }).join('<br>');
-        el('toc-preview').innerHTML = chapterList.length > 0 ? "検出: " + chapterList.join(' / ') : "章タイトル未検出";
+
+        el('toc-preview').innerHTML = chapterList.length > 0 ? "検出した目次: " + chapterList.join(' / ') : "章タイトル未検出";
+
         const coverHtml = coverBase64 ? `<img src="${coverBase64}" style="width:100%; margin-bottom:20px;">` : "";
-        const previewHTML = `${coverHtml}<h2>${title}</h2><p>${desc}</p><hr>${htmlBody}`;
+        const previewHTML = `${coverHtml}<h2 style="text-align:center;">${title}</h2><p style="font-size:0.85em; color:#666; text-align:center; padding:0 20px;">${desc}</p><hr>${htmlBody}`;
+        
         if (source !== 'tate') el('view-tate').innerHTML = previewHTML;
         if (source !== 'yoko') el('view-yoko').innerHTML = previewHTML;
     }
 
-    // --- ここが修正の核心：バグのみを殺し、機能は守る ---
     async function exportWord() {
         const title = el('f-title').value;
         const desc = el('f-desc').value;
         const rawText = el('main-input').value;
         
-        // 【バグ根絶】空白削除と無限ページ増殖の停止
-        const cleanText = rawText.replace(/([、。？！])\s+/g, '$1').replace(/\n{3,}/g, '\n\n');
+        // 【修正核心部】
+        const cleanText = rawText
+            .replace(/([、。？！])\s+/g, '$1') // 日本語句読点後の空白を削除
+            .replace(/\n{3,}/g, '\n\n');      // 連続改行を2つに制限
+
         const lines = cleanText.split('\n');
         let docChildren = [];
 
-        // タイトルとあらすじ
         docChildren.push(new docx.Paragraph({ text: title, heading: docx.HeadingLevel.TITLE, alignment: docx.AlignmentType.CENTER }));
         docChildren.push(new docx.Paragraph({ text: desc, spacing: { before: 200 } }));
         docChildren.push(new docx.Paragraph({ text: "", pageBreakBefore: true }));
 
-        // 本文：500ページにならないようシンプルなループに修正
         lines.forEach((line) => {
-            const isChapter = chapterRegex.test(line);
+            const isChap = chapterRegex.test(line);
             docChildren.push(new docx.Paragraph({
-                text: line || " ",
-                heading: isChapter ? docx.HeadingLevel.HEADING_1 : undefined,
-                spacing: { line: 360, before: isChapter ? 400 : 0 },
-                font: "MS 明朝"
+                children: [new docx.TextRun({ text: line || " ", font: "MS 明朝", size: 24 })],
+                heading: isChap ? docx.HeadingLevel.HEADING_1 : undefined,
+                spacing: { line: 360, before: isChap ? 400 : 0 }
             }));
         });
 
-        const doc = new docx.Document({ creator: "LaLaLa", sections: [{ children: docChildren }] });
+        const doc = new docx.Document({ sections: [{ children: docChildren }] });
         const blob = await docx.Packer.toBlob(doc);
-        saveAs(blob, `${title}_完成版.docx`);
-        alert("射出完了。500ページのバグを消滅させました。");
+        saveAs(blob, `${title}_修正版.docx`);
+        alert("射出完了。525ページの暴走を止めました。");
     }
     sync('master');
 </script>
